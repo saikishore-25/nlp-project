@@ -1,0 +1,58 @@
+bash
+pip install pandas scikit-learn nltk
+
+text,label
+"I love this product!",positive
+"This is the worst movie ever.",negative
+"Absolutely fantastic experience.",positive
+"Not good at all.",negative
+
+import pandas as pd
+from sklearn.model_selection import train_test_split
+from sklearn.feature_extraction.text import CountVectorizer
+from sklearn.pipeline import Pipeline
+from sklearn.naive_bayes import MultinomialNB
+from sklearn.metrics import classification_report, accuracy_score
+import nltk
+import string
+from nltk.corpus import stopwords
+
+
+nltk.download('stopwords')
+stop_words = set(stopwords.words('english'))
+
+def preprocess_text(text):
+    text = text.lower()
+    text = ''.join([ch for ch in text if ch not in string.punctuation])
+    words = text.split()
+    words = [word for word in words if word not in stop_words]
+    return ' '.join(words)
+
+data = pd.read_csv('sentiment_data.csv')  # <-- Update with your CSV file
+data.dropna(inplace=True)
+
+data['text'] = data['text'].apply(preprocess_text)
+
+X_train, X_test, y_train, y_test = train_test_split(
+    data['text'], data['label'], test_size=0.2, random_state=42
+)
+
+model = Pipeline([
+    ('vectorizer', CountVectorizer()),
+    ('classifier', MultinomialNB())
+])
+
+model.fit(X_train, y_train)
+
+y_pred = model.predict(X_test)
+print("Accuracy:", accuracy_score(y_test, y_pred))
+print("\nClassification Report:\n", classification_report(y_test, y_pred))
+
+while True:
+    text = input("Enter a sentence for sentiment analysis (or type 'exit'): ")
+    if text.lower() == 'exit':
+        break
+    cleaned = preprocess_text(text)
+    prediction = model.predict([cleaned])[0]
+    print("Predicted Sentiment:", prediction)
+
