@@ -1,0 +1,67 @@
+bash
+pip install pandas scikit-learn nltk
+
+import pandas as pd
+import numpy as np
+import re
+import string
+
+from sklearn.model_selection import train_test_split
+from sklearn.feature_extraction.text import TfidfVectorizer
+from sklearn.linear_model import LogisticRegression
+from sklearn.metrics import classification_report, accuracy_score
+from nltk.corpus import stopwords
+from nltk.stem import PorterStemmer
+import nltk
+nltk.download('stopwords')
+data = {
+    'review': [
+        "I love this product, it's amazing!",
+        "Terrible, it broke after one day.",
+        "Great quality and very useful.",
+        "I hate it. Waste of money!",
+        "Best purchase I've made this year.",
+        "Not worth the price.",
+        "Absolutely fantastic product!",
+        "Very disappointing and cheap.",
+        "Works perfectly, no issues.",
+        "Would not recommend it to anyone."
+    ],
+    'sentiment': [1, 0, 1, 0, 1, 0, 1, 0, 1, 0]  # 1 = Positive, 0 = Negative
+}
+df = pd.DataFrame(data)
+
+def preprocess_text(text):
+    text = text.lower()
+    text = re.sub(r'<[^>]+>', '', text)  # Remove HTML
+    text = re.sub(r'[^a-z\s]', '', text)  # Remove punctuation/numbers
+    tokens = text.split()
+    stop_words = set(stopwords.words('english'))
+    tokens = [word for word in tokens if word not in stop_words]
+    stemmer = PorterStemmer()
+    tokens = [stemmer.stem(word) for word in tokens]
+    return ' '.join(tokens)
+
+df['clean_review'] = df['review'].apply(preprocess_text)
+
+X_train, X_test, y_train, y_test = train_test_split(df['clean_review'], df['sentiment'], test_size=0.2, random_state=42)
+vectorizer = TfidfVectorizer()
+X_train_vec = vectorizer.fit_transform(X_train)
+X_test_vec = vectorizer.transform(X_test)
+
+model = LogisticRegression()
+model.fit(X_train_vec, y_train)
+
+y_pred = model.predict(X_test_vec)
+print("Accuracy:", accuracy_score(y_test, y_pred))
+print("Classification Report:\n", classification_report(y_test, y_pred))
+
+def predict_sentiment(review):
+    clean = preprocess_text(review)
+    vec = vectorizer.transform([clean])
+    prediction = model.predict(vec)[0]
+    return "Positive" if prediction == 1 else "Negative"
+
+test_review = "This is the best phone I've ever used!"
+print(f"Review: {test_review}")
+print(f"Sentiment: {predict_sentiment(test_review)}")
